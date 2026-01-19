@@ -1,119 +1,200 @@
 
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Advanced Admin</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAXMASTI - All In One</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background: #0a0a0a; color: white; font-family: sans-serif; padding: 20px; }
-        .box { background: #111; padding: 20px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px; }
-        input, select, textarea { width: 100%; max-width: 400px; display: block; padding: 10px; margin: 10px 0; background: #000; color: white; border: 1px solid #444; }
-        button { padding: 10px 20px; cursor: pointer; border: none; font-weight: bold; border-radius: 5px; background: #00ff88; }
-        .btn-del { background: #e74c3c; color: white; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        td, th { padding: 12px; border-bottom: 1px solid #222; text-align: left; }
+        body { background-color: #080808; color: white; font-family: 'Inter', sans-serif; }
+        .movie-card:hover img { transform: scale(1.05); transition: 0.3s ease-out; }
+        .hidden { display: none; }
+        #mainPlayer { background: #000 url('https://i.gifer.com/ZZ5H.gif') center no-repeat; background-size: 50px; }
+        .category-btn.active { background: linear-gradient(45deg, #f59e0b, #fbbf24); color: black; }
     </style>
 </head>
-<body>
-    <h1>🔒 Admin Panel</h1>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="p-4 border-b border-gray-900 sticky top-0 bg-gray-900/95 backdrop-blur-md z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl md:text-3xl font-black bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">
+                🎬 MAXMASTI
+            </h1>
+            <a href="admin.html" class="bg-gradient-to-r from-emerald-500 to-emerald-400 px-6 py-2 rounded-2xl font-bold hover:from-emerald-400 hover:to-emerald-300 transition-all duration-300">
+                Admin Panel
+            </a>
+        </div>
+    </nav>
 
-    <div class="box">
-        <h3>Add New Category</h3>
-        <input type="text" id="newCat" placeholder="Example: Cricket, News">
-        <button onclick="addCategory()">ADD CATEGORY</button>
+    <div class="max-w-7xl mx-auto p-4 md:p-6 pb-20">
+        <!-- Categories Filter -->
+        <div class="mb-12">
+            <h2 class="text-3xl font-black mb-6 text-yellow-500 flex items-center gap-3">📂 Categories</h2>
+            <div id="category-buttons" class="flex flex-wrap gap-3"></div>
+        </div>
+
+        <!-- Movies Grid -->
+        <div id="movies-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div class="text-center py-20 text-gray-500">Loading movies...</div>
+        </div>
     </div>
 
-    <div class="box">
-        <h3 id="fTitle">Upload Video</h3>
-        <input type="hidden" id="editId">
-        <input type="text" id="t" placeholder="Title">
-        <input type="file" id="imgFile">
-        <input type="text" id="v" placeholder="Byse.sx ID (e.g. hepjbi4id3o6)">
-        <select id="cSelect"></select> <textarea id="d" placeholder="Description"></textarea>
-        <button onclick="save()">PUBLISH / UPDATE</button>
+    <!-- Video Player Modal -->
+    <div id="videoModal" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4">
+        <div class="max-w-4xl w-full max-h-screen overflow-auto relative">
+            <button onclick="closePlayer()" class="absolute top-2 right-2 text-white text-3xl hover:text-yellow-500 z-10 bg-black/50 w-12 h-12 rounded-full flex items-center justify-center">
+                ✕
+            </button>
+            <div class="bg-gray-900 p-4 rounded-3xl">
+                <h3 id="videoTitle" class="text-xl font-bold mb-4 text-yellow-400"></h3>
+                <iframe id="mainPlayer" class="w-full h-96 md:h-[500px] rounded-2xl" allowfullscreen allow="autoplay"></iframe>
+            </div>
+        </div>
     </div>
-
-    <table>
-        <thead><tr><th>Poster</th><th>Title</th><th>Category</th><th>Actions</th></tr></thead>
-        <tbody id="list"></tbody>
-    </table>
 
     <script>
-        let allData = [];
-        
-        async function addCategory() {
-            const name = document.getElementById('newCat').value.toLowerCase();
-            if(!name) return;
-            await fetch('/api/add-category', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name}) });
-            location.reload();
-        }
+        const API_BASE = 'api.php';
+        let allMovies = [];
+        let currentCategory = 'all';
 
-        async function load() {
-            // Load Categories
-            const catRes = await fetch('/api/categories');
-            const cats = await catRes.json();
-            const select = document.getElementById('cSelect');
-            cats.forEach(c => select.innerHTML += `<option value="${c}">${c.toUpperCase()}</option>`);
-
-            // Load Content
-            const res = await fetch('/api/content');
-            allData = await res.json();
-            const list = document.getElementById('list');
-            allData.forEach((item, index) => {
-                list.innerHTML += `<tr>
-                    <td><img src="${item.image}" width="50"></td>
-                    <td>${item.title}</td>
-                    <td>${item.category}</td>
-                    <td>
-                        <button onclick="edit(${index})" style="background:#3498db; color:white;">Edit</button>
-                        <button class="btn-del" onclick="del(${item.id})">Delete</button>
-                    </td>
-                </tr>`;
-            });
-        }
-
-        async function save() {
-            const fileInput = document.getElementById('imgFile');
-            let imageUrl = allData.find(i => i.id == document.getElementById('editId').value)?.image || "";
-
-            if (fileInput.files.length > 0) {
-                const formData = new FormData();
-                formData.append('image', fileInput.files[0]);
-                const imgRes = await fetch('/api/upload-image', { method: 'POST', body: formData });
-                const imgData = await imgRes.json();
-                imageUrl = imgData.url;
-            }
-
-            const data = {
-                id: document.getElementById('editId').value || null,
-                title: document.getElementById('t').value,
-                image: imageUrl,
-                videoId: document.getElementById('v').value,
-                category: document.getElementById('cSelect').value,
-                desc: document.getElementById('d').value
-            };
-            await fetch('/api/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            location.reload();
-        }
-
-        function edit(index) {
-            const item = allData[index];
-            document.getElementById('editId').value = item.id;
-            document.getElementById('t').value = item.title;
-            document.getElementById('v').value = item.videoId;
-            document.getElementById('cSelect').value = item.category;
-            document.getElementById('d').value = item.desc;
-            document.getElementById('fTitle').innerText = "Editing...";
-            window.scrollTo(0,0);
-        }
-
-        async function del(id) {
-            if(confirm('Delete?')) {
-                await fetch('/api/delete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id}) });
-                location.reload();
+        // Load categories
+        async function loadCategories() {
+            try {
+                const res = await fetch(`${API_BASE}?action=cats`);
+                const categories = await res.json();
+                
+                const container = document.getElementById('category-buttons');
+                container.innerHTML = `
+                    <button class="category-btn active px-8 py-3 bg-gray-800/50 border border-yellow-500 rounded-2xl font-bold hover:bg-yellow-500 hover:text-black transition-all duration-300" data-cat="all">
+                        All Content
+                    </button>
+                    ${categories.map(cat => `
+                        <button class="category-btn px-8 py-3 bg-gray-800/50 border border-gray-700 rounded-2xl font-bold hover:border-yellow-500 hover:bg-yellow-500 hover:text-black transition-all duration-300" data-cat="${cat.name}">
+                            ${cat.name}
+                        </button>
+                    `).join('')}
+                `;
+            } catch(e) {
+                console.error('Categories error:', e);
             }
         }
-        load();
+
+        // Load movies
+        async function loadMovies(filter = 'all') {
+            try {
+                const res = await fetch(`${API_BASE}?action=movies`);
+                allMovies = await res.json();
+                
+                const container = document.getElementById('movies-container');
+                const filtered = filter === 'all' ? allMovies : allMovies.filter(m => m.cat === filter);
+                
+                container.innerHTML = filtered.length ? 
+                    filtered.map(movie => `
+                        <div class="movie-card bg-gray-900/80 rounded-3xl p-6 border border-gray-800 hover:border-yellow-500 transition-all duration-300 hover:shadow-2xl group">
+                            <div class="relative overflow-hidden rounded-2xl mb-4 h-64 bg-gray-800">
+                                ${movie.img ? `
+                                    <img src="${movie.img}" alt="${movie.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                ` : `
+                                    <div class="w-full h-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                                        <span class="text-2xl font-bold">${movie.title.substring(0,2).toUpperCase()}</span>
+                                    </div>
+                                `}
+                            </div>
+                            <h3 class="font-bold text-xl mb-2 line-clamp-2 group-hover:text-yellow-400 transition-colors">${movie.title}</h3>
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-bold">${movie.cat}</span>
+                            </div>
+                            <button onclick="playVideo('${movie.link}', '${movie.title.replace(/'/g, "\\'")}')" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-400 text-black font-bold py-3 px-6 rounded-2xl hover:from-emerald-400 hover:to-emerald-300 hover:scale-105 transition-all duration-300 shadow-xl">
+                                ▶️ Watch Now
+                            </button>
+                        </div>
+                    `).join('') : 
+                    '<div class="col-span-full text-center py-20 text-gray-500">No movies found</div>';
+            } catch(e) {
+                document.getElementById('movies-container').innerHTML = 
+                    '<div class="col-span-full text-center py-20 text-red-400">API Error - Check F12 Console</div>';
+                console.error('Movies error:', e);
+            }
+        }
+
+        function playVideo(link, title) {
+            console.log('Playing video:', link);
+            let embedUrl = '';
+            
+            // Clean the link
+            link = link.trim();
+            
+            // VOE.SX - Multiple pattern support
+            if (link.includes('voe.sx') || link.includes('voe')) {
+                const voeMatch = link.match(/([a-z0-9]{12})/i);
+                if (voeMatch) {
+                    embedUrl = `https://voe.sx/e/${voeMatch[1]}`;
+                }
+            }
+            // DOODSTREAM - Multiple pattern support
+            else if (link.includes('dood')) {
+                const doodMatch = link.match(/([a-z0-9]+)$/i);
+                if (doodMatch) {
+                    embedUrl = `https://dood.ws/e/${doodMatch[1]}`;
+                }
+            }
+            // Direct ID input (no domain)
+            else if (/^[a-z0-9]{12}$/i.test(link)) {
+                // Assume VOE format for 12 character IDs
+                embedUrl = `https://voe.sx/e/${link}`;
+            }
+            else if (/^[a-z0-9]+$/i.test(link)) {
+                // For other alphanumeric IDs, try doodstream
+                embedUrl = `https://dood.ws/e/${link}`;
+            }
+            // Full URL support
+            else if (link.startsWith('http')) {
+                embedUrl = link;
+            }
+            
+            console.log('Embed URL:', embedUrl);
+            
+            if (embedUrl) {
+                document.getElementById('videoTitle').textContent = title;
+                document.getElementById('mainPlayer').src = embedUrl;
+                document.getElementById('videoModal').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            } else {
+                alert('❌ Invalid video link format!\n\nSupported formats:\n• VOE: vuqevy71anqx or https://voe.sx/vuqevy71anqx\n• DOOD: abc123xyz or https://dood.ws/e/abc123xyz\n\nCurrent link: ' + link);
+            }
+        }
+
+        function closePlayer() {
+            document.getElementById('videoModal').classList.add('hidden');
+            document.getElementById('mainPlayer').src = '';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Events
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('category-btn')) {
+                document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                currentCategory = e.target.dataset.cat;
+                loadMovies(currentCategory);
+            }
+        });
+
+        document.getElementById('videoModal').addEventListener('click', (e) => {
+            if (e.target.id === 'videoModal') closePlayer();
+        });
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePlayer();
+        });
+
+        // Auto refresh
+        loadCategories();
+        loadMovies();
+        setInterval(() => loadMovies(currentCategory), 10000);
     </script>
 </body>
 </html>
