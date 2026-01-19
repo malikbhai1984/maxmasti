@@ -3,88 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MixMovie - Free Streaming</title>
+    <title>MAXMASTI - All In One</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background: #0f1014; color: white; scroll-behavior: smooth; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .movie-card:hover { transform: scale(1.08); z-index: 10; border-color: #eab308; }
+        body { background-color: #080808; color: white; font-family: 'Inter', sans-serif; }
+        .movie-card:hover img { transform: scale(1.05); transition: 0.3s ease-out; }
+        .hidden { display: none; }
+        #mainPlayer { background: #000 url('https://i.gifer.com/ZZ5H.gif') center no-repeat; background-size: 50px; }
+        .category-btn.active { background: linear-gradient(45deg, #f59e0b, #fbbf24); color: black; }
     </style>
 </head>
-<body>
-    <nav class="p-4 flex justify-between items-center bg-black/90 sticky top-0 z-50 backdrop-blur">
-        <h1 class="text-2xl font-black text-yellow-500 tracking-tighter">MIXMOVIE</h1>
-        <form action="/" method="GET" class="w-1/2 md:w-1/3">
-            <input name="q" placeholder="Search Movies, Sports, TV..." class="bg-gray-800 px-4 py-2 rounded-full w-full outline-none focus:ring-2 focus:ring-yellow-500 text-sm">
-        </form>
-        <a href="/admin" class="hidden md:block text-xs text-gray-500">Admin</a>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="p-4 border-b border-gray-900 sticky top-0 bg-gray-900/95 backdrop-blur-md z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl md:text-3xl font-black bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">
+                🎬 MAXMASTI
+            </h1>
+            <a href="admin.html" class="bg-gradient-to-r from-emerald-500 to-emerald-400 px-6 py-2 rounded-2xl font-bold hover:from-emerald-400 hover:to-emerald-300 transition-all duration-300">
+                Admin Panel
+            </a>
+        </div>
     </nav>
 
-    <div id="player-overlay" class="fixed inset-0 bg-black/95 z-[100] hidden flex flex-col items-center justify-center p-4">
-        <button onclick="closePlayer()" class="absolute top-5 right-10 text-5xl text-white">&times;</button>
-        <div id="video-box" class="w-full max-w-5xl aspect-video bg-black rounded-lg overflow-hidden border-2 border-yellow-500 shadow-2xl">
+    <div class="max-w-7xl mx-auto p-4 md:p-6 pb-20">
+        <!-- Categories Filter -->
+        <div class="mb-12">
+            <h2 class="text-3xl font-black mb-6 text-yellow-500 flex items-center gap-3">📂 Categories</h2>
+            <div id="category-buttons" class="flex flex-wrap gap-3"></div>
+        </div>
+
+        <!-- Movies Grid -->
+        <div id="movies-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div class="text-center py-20 text-gray-500">Loading movies...</div>
+        </div>
+    </div>
+
+    <!-- Video Player Modal -->
+    <div id="videoModal" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4">
+        <div class="max-w-4xl w-full max-h-screen overflow-auto relative">
+            <button onclick="closePlayer()" class="absolute top-2 right-2 text-white text-3xl hover:text-yellow-500 z-10 bg-black/50 w-12 h-12 rounded-full flex items-center justify-center">
+                ✕
+            </button>
+            <div class="bg-gray-900 p-4 rounded-3xl">
+                <h3 id="videoTitle" class="text-xl font-bold mb-4 text-yellow-400"></h3>
+                <iframe id="mainPlayer" class="w-full h-96 md:h-[500px] rounded-2xl" allowfullscreen allow="autoplay"></iframe>
             </div>
+        </div>
     </div>
 
-    <div class="flex gap-4 p-6 overflow-x-auto no-scrollbar border-b border-gray-800">
-        <a href="#" class="bg-yellow-500 text-black px-6 py-1 rounded-full font-bold">Home</a>
-        <a href="#section-Sports" class="bg-gray-800 px-6 py-1 rounded-full font-bold hover:bg-red-600 transition">Live Sports</a>
-        <a href="#section-Movie" class="bg-gray-800 px-6 py-1 rounded-full font-bold hover:bg-yellow-500 hover:text-black">Movies</a>
-        <a href="#section-Live" class="bg-gray-800 px-6 py-1 rounded-full font-bold hover:bg-yellow-500 hover:text-black">Live TV</a>
-    </div>
-
-    <div class="p-6 md:p-12">
-        <% ['Sports', 'Movie', 'Live', 'Drama'].forEach(cat => { %>
-            <section id="section-<%= cat %>" class="mb-12">
-                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-                    <span class="w-1 h-6 bg-yellow-500"></span> Latest <%= cat %>
-                </h2>
-                <div class="flex gap-5 overflow-x-auto pb-6 no-scrollbar">
-                    <% content.filter(item => item.cat === cat).forEach(item => { %>
-                        <div class="movie-card min-w-[160px] md:min-w-[200px] cursor-pointer transition-all duration-300 border-2 border-transparent rounded-xl overflow-hidden bg-gray-900" 
-                             onclick="playMedia('<%= item.link %>', '<%= item.cat %>')">
-                            <div class="relative">
-                                <img src="<%= item.img %>" class="h-60 md:h-72 w-full object-cover">
-                                <% if(cat === 'Sports' || cat === 'Live') { %>
-                                    <span class="absolute top-2 left-2 bg-red-600 text-[10px] px-2 py-1 rounded font-bold animate-pulse">LIVE</span>
-                                <% } %>
-                            </div>
-                            <div class="p-3 text-sm font-bold truncate text-gray-300"><%= item.title %></div>
-                        </div>
-                    <% }) %>
-                </div>
-            </section>
-        <% }) %>
-    </div>
-
-    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
     <script>
-        function playMedia(link, cat) {
-            // Open Adsterra/Monetag Ad in new tab
-            window.open("https://your-ad-link.com", "_blank");
+        const API_BASE = 'api.php';
+        let allMovies = [];
+        let currentCategory = 'all';
 
-            const overlay = document.getElementById('player-overlay');
-            const videoBox = document.getElementById('video-box');
-            overlay.classList.remove('hidden');
+        // Load categories
+        async function loadCategories() {
+            try {
+                const res = await fetch(`${API_BASE}?action=cats`);
+                const categories = await res.json();
+                
+                const container = document.getElementById('category-buttons');
+                container.innerHTML = `
+                    <button class="category-btn active px-8 py-3 bg-gray-800/50 border border-yellow-500 rounded-2xl font-bold hover:bg-yellow-500 hover:text-black transition-all duration-300" data-cat="all">
+                        All Content
+                    </button>
+                    ${categories.map(cat => `
+                        <button class="category-btn px-8 py-3 bg-gray-800/50 border border-gray-700 rounded-2xl font-bold hover:border-yellow-500 hover:bg-yellow-500 hover:text-black transition-all duration-300" data-cat="${cat.name}">
+                            ${cat.name}
+                        </button>
+                    `).join('')}
+                `;
+            } catch(e) {
+                console.error('Categories error:', e);
+            }
+        }
 
-            if(cat === 'Sports' || cat === 'Live') {
-                // For HLS Streaming (.m3u8)
-                videoBox.innerHTML = `
-                    <video id="my-player" class="video-js vjs-16-9 vjs-big-play-centered" controls autoPlay>
-                        <source src="${link}" type="application/x-mpegURL">
-                    </video>`;
-                videojs('my-player');
+        // Load movies
+        async function loadMovies(filter = 'all') {
+            try {
+                const res = await fetch(`${API_BASE}?action=movies`);
+                allMovies = await res.json();
+                
+                const container = document.getElementById('movies-container');
+                const filtered = filter === 'all' ? allMovies : allMovies.filter(m => m.cat === filter);
+                
+                container.innerHTML = filtered.length ? 
+                    filtered.map(movie => `
+                        <div class="movie-card bg-gray-900/80 rounded-3xl p-6 border border-gray-800 hover:border-yellow-500 transition-all duration-300 hover:shadow-2xl group">
+                            <div class="relative overflow-hidden rounded-2xl mb-4 h-64 bg-gray-800">
+                                ${movie.img ? `
+                                    <img src="${movie.img}" alt="${movie.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                ` : `
+                                    <div class="w-full h-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                                        <span class="text-2xl font-bold">${movie.title.substring(0,2).toUpperCase()}</span>
+                                    </div>
+                                `}
+                            </div>
+                            <h3 class="font-bold text-xl mb-2 line-clamp-2 group-hover:text-yellow-400 transition-colors">${movie.title}</h3>
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-bold">${movie.cat}</span>
+                            </div>
+                            <button onclick="playVideo('${movie.link}', '${movie.title.replace(/'/g, "\\'")}')" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-400 text-black font-bold py-3 px-6 rounded-2xl hover:from-emerald-400 hover:to-emerald-300 hover:scale-105 transition-all duration-300 shadow-xl">
+                                ▶️ Watch Now
+                            </button>
+                        </div>
+                    `).join('') : 
+                    '<div class="col-span-full text-center py-20 text-gray-500">No movies found</div>';
+            } catch(e) {
+                document.getElementById('movies-container').innerHTML = 
+                    '<div class="col-span-full text-center py-20 text-red-400">API Error - Check F12 Console</div>';
+                console.error('Movies error:', e);
+            }
+        }
+
+        function playVideo(link, title) {
+            console.log('Playing video:', link);
+            let embedUrl = '';
+            
+            // Clean the link
+            link = link.trim();
+            
+            // VOE.SX - Multiple pattern support
+            if (link.includes('voe.sx') || link.includes('voe')) {
+                const voeMatch = link.match(/([a-z0-9]{12})/i);
+                if (voeMatch) {
+                    embedUrl = `https://voe.sx/e/${voeMatch[1]}`;
+                }
+            }
+            // DOODSTREAM - Multiple pattern support
+            else if (link.includes('dood')) {
+                const doodMatch = link.match(/([a-z0-9]+)$/i);
+                if (doodMatch) {
+                    embedUrl = `https://dood.ws/e/${doodMatch[1]}`;
+                }
+            }
+            // Direct ID input (no domain)
+            else if (/^[a-z0-9]{12}$/i.test(link)) {
+                // Assume VOE format for 12 character IDs
+                embedUrl = `https://voe.sx/e/${link}`;
+            }
+            else if (/^[a-z0-9]+$/i.test(link)) {
+                // For other alphanumeric IDs, try doodstream
+                embedUrl = `https://dood.ws/e/${link}`;
+            }
+            // Full URL support
+            else if (link.startsWith('http')) {
+                embedUrl = link;
+            }
+            
+            console.log('Embed URL:', embedUrl);
+            
+            if (embedUrl) {
+                document.getElementById('videoTitle').textContent = title;
+                document.getElementById('mainPlayer').src = embedUrl;
+                document.getElementById('videoModal').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
             } else {
-                // For Movies/Dramas (Embed Iframe)
-                videoBox.innerHTML = `<iframe src="${link}" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>`;
+                alert('❌ Invalid video link format!\n\nSupported formats:\n• VOE: vuqevy71anqx or https://voe.sx/vuqevy71anqx\n• DOOD: abc123xyz or https://dood.ws/e/abc123xyz\n\nCurrent link: ' + link);
             }
         }
 
         function closePlayer() {
-            document.getElementById('player-overlay').classList.add('hidden');
-            document.getElementById('video-box').innerHTML = '';
+            document.getElementById('videoModal').classList.add('hidden');
+            document.getElementById('mainPlayer').src = '';
+            document.body.style.overflow = 'auto';
         }
+
+        // Events
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('category-btn')) {
+                document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                currentCategory = e.target.dataset.cat;
+                loadMovies(currentCategory);
+            }
+        });
+
+        document.getElementById('videoModal').addEventListener('click', (e) => {
+            if (e.target.id === 'videoModal') closePlayer();
+        });
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePlayer();
+        });
+
+        // Auto refresh
+        loadCategories();
+        loadMovies();
+        setInterval(() => loadMovies(currentCategory), 10000);
     </script>
 </body>
 </html>
