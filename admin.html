@@ -1,200 +1,170 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAXMASTI - All In One</title>
+    <title>Admin CRUD - MaxMasti</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #080808; color: white; font-family: 'Inter', sans-serif; }
-        .movie-card:hover img { transform: scale(1.05); transition: 0.3s ease-out; }
-        .hidden { display: none; }
-        #mainPlayer { background: #000 url('https://i.gifer.com/ZZ5H.gif') center no-repeat; background-size: 50px; }
-        .category-btn.active { background: linear-gradient(45deg, #f59e0b, #fbbf24); color: black; }
-    </style>
 </head>
-<body class="min-h-screen">
-    <!-- Navigation -->
-    <nav class="p-4 border-b border-gray-900 sticky top-0 bg-gray-900/95 backdrop-blur-md z-50">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl md:text-3xl font-black bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                🎬 MAXMASTI
-            </h1>
-            <a href="admin.html" class="bg-gradient-to-r from-emerald-500 to-emerald-400 px-6 py-2 rounded-2xl font-bold hover:from-emerald-400 hover:to-emerald-300 transition-all duration-300">
-                Admin Panel
-            </a>
-        </div>
-    </nav>
-
-    <div class="max-w-7xl mx-auto p-4 md:p-6 pb-20">
-        <!-- Categories Filter -->
-        <div class="mb-12">
-            <h2 class="text-3xl font-black mb-6 text-yellow-500 flex items-center gap-3">📂 Categories</h2>
-            <div id="category-buttons" class="flex flex-wrap gap-3"></div>
+<body class="bg-black text-white p-6 font-sans">
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Categories Panel -->
+        <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800">
+            <h2 class="text-2xl font-bold mb-4 border-b border-gray-800 pb-2">📂 Categories</h2>
+            <div class="flex gap-2 mb-4">
+                <input id="catName" class="w-full bg-black p-2 rounded border border-gray-700 outline-none" placeholder="New Category">
+                <button onclick="addCategory()" class="bg-yellow-600 px-4 py-2 rounded font-bold hover:bg-yellow-500 text-sm">ADD</button>
+            </div>
+            <div id="catList" class="space-y-2 text-sm max-h-96 overflow-y-auto"></div>
         </div>
 
-        <!-- Movies Grid -->
-        <div id="movies-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <div class="text-center py-20 text-gray-500">Loading movies...</div>
-        </div>
-    </div>
+        <!-- Movies Panel -->
+        <div class="lg:col-span-2 bg-gray-900 p-6 rounded-2xl border border-gray-800">
+            <h2 id="formTitle" class="text-2xl font-bold mb-4 border-b border-gray-800 pb-2">➕ Add New Movie</h2>
+            <form id="movieForm" enctype="multipart/form-data" class="space-y-4">
+                <input type="hidden" name="id" id="movieId">
+                <input type="hidden" name="old_img" id="oldImg">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" name="title" id="mTitle" placeholder="Movie Title *" class="bg-black p-3 rounded border border-gray-700 outline-none w-full" required>
+                    <select name="cat" id="mCat" class="bg-black p-3 rounded border border-gray-700 outline-none w-full" required>
+                        <option value="">Select Category</option>
+                    </select>
+                </div>
+                <input type="file" name="image" accept="image/*" class="w-full bg-black p-3 border border-gray-700 rounded">
+                <input type="text" name="link" id="mLink" placeholder="Video ID: vuqevy71anqx" class="w-full bg-black p-3 rounded border border-gray-700 outline-none" required>
+                <div class="flex gap-2">
+                    <button type="submit" id="submitBtn" class="bg-yellow-500 text-black font-black p-3 rounded w-full hover:bg-yellow-400">🚀 PUBLISH</button>
+                    <button type="button" id="cancelBtn" onclick="resetForm()" class="hidden bg-red-600 px-6 py-3 rounded font-bold hover:bg-red-500">CANCEL</button>
+                </div>
+            </form>
 
-    <!-- Video Player Modal -->
-    <div id="videoModal" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4">
-        <div class="max-w-4xl w-full max-h-screen overflow-auto relative">
-            <button onclick="closePlayer()" class="absolute top-2 right-2 text-white text-3xl hover:text-yellow-500 z-10 bg-black/50 w-12 h-12 rounded-full flex items-center justify-center">
-                ✕
-            </button>
-            <div class="bg-gray-900 p-4 rounded-3xl">
-                <h3 id="videoTitle" class="text-xl font-bold mb-4 text-yellow-400"></h3>
-                <iframe id="mainPlayer" class="w-full h-96 md:h-[500px] rounded-2xl" allowfullscreen allow="autoplay"></iframe>
+            <div class="mt-10 overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead class="bg-gray-800">
+                        <tr><th class="p-3">Title</th><th class="p-3 text-right">Actions</th></tr>
+                    </thead>
+                    <tbody id="movieList"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <script>
         const API_BASE = 'api.php';
-        let allMovies = [];
-        let currentCategory = 'all';
 
-        // Load categories
-        async function loadCategories() {
+        async function loadData() {
             try {
-                const res = await fetch(`${API_BASE}?action=cats`);
-                const categories = await res.json();
+                // Load categories
+                const catsRes = await fetch(`${API_BASE}?action=cats`);
+                const cats = await catsRes.json();
                 
-                const container = document.getElementById('category-buttons');
-                container.innerHTML = `
-                    <button class="category-btn active px-8 py-3 bg-gray-800/50 border border-yellow-500 rounded-2xl font-bold hover:bg-yellow-500 hover:text-black transition-all duration-300" data-cat="all">
-                        All Content
-                    </button>
-                    ${categories.map(cat => `
-                        <button class="category-btn px-8 py-3 bg-gray-800/50 border border-gray-700 rounded-2xl font-bold hover:border-yellow-500 hover:bg-yellow-500 hover:text-black transition-all duration-300" data-cat="${cat.name}">
-                            ${cat.name}
-                        </button>
-                    `).join('')}
-                `;
+                document.getElementById('catList').innerHTML = cats.map(c => `
+                    <div class="flex justify-between p-2 bg-black rounded border border-gray-800 hover:bg-gray-800">
+                        <span class="font-medium">${c.name}</span>
+                        <button onclick="deleteItem('del-cat', ${c.id})" class="text-red-500 font-bold text-xs hover:text-red-400">DEL</button>
+                    </div>
+                `).join('') || '<div class="p-4 text-gray-500 text-center">No categories</div>';
+
+                // Update category dropdown
+                const catSelect = document.getElementById('mCat');
+                catSelect.innerHTML = '<option value="">Select Category</option>' + 
+                    cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+
+                // Load movies
+                const moviesRes = await fetch(`${API_BASE}?action=movies`);
+                const movies = await moviesRes.json();
+                
+                document.getElementById('movieList').innerHTML = movies.map(m => `
+                    <tr class="border-b border-gray-800 hover:bg-black/50">
+                        <td class="p-3 font-bold">${m.title}
+                            <span class="block text-[10px] text-yellow-600">${m.cat}</span>
+                            <span class="block text-xs text-gray-400">${m.link}</span>
+                        </td>
+                        <td class="p-3 text-right space-x-2">
+                            <button onclick="editMovie(${m.id})" class="text-blue-400 font-bold underline hover:text-blue-300">EDIT</button>
+                            <button onclick="deleteItem('del-post', ${m.id})" class="text-red-500 font-bold underline hover:text-red-400">DEL</button>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="2" class="p-8 text-center text-gray-500">No movies</td></tr>';
             } catch(e) {
-                console.error('Categories error:', e);
+                console.error('Load error:', e);
             }
         }
 
-        // Load movies
-        async function loadMovies(filter = 'all') {
+        async function addCategory() {
+            const name = document.getElementById('catName').value.trim();
+            if (!name) return alert('Category name required');
+            
             try {
-                const res = await fetch(`${API_BASE}?action=movies`);
-                allMovies = await res.json();
-                
-                const container = document.getElementById('movies-container');
-                const filtered = filter === 'all' ? allMovies : allMovies.filter(m => m.cat === filter);
-                
-                container.innerHTML = filtered.length ? 
-                    filtered.map(movie => `
-                        <div class="movie-card bg-gray-900/80 rounded-3xl p-6 border border-gray-800 hover:border-yellow-500 transition-all duration-300 hover:shadow-2xl group">
-                            <div class="relative overflow-hidden rounded-2xl mb-4 h-64 bg-gray-800">
-                                ${movie.img ? `
-                                    <img src="${movie.img}" alt="${movie.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-                                ` : `
-                                    <div class="w-full h-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
-                                        <span class="text-2xl font-bold">${movie.title.substring(0,2).toUpperCase()}</span>
-                                    </div>
-                                `}
-                            </div>
-                            <h3 class="font-bold text-xl mb-2 line-clamp-2 group-hover:text-yellow-400 transition-colors">${movie.title}</h3>
-                            <div class="flex items-center gap-2 mb-4">
-                                <span class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-bold">${movie.cat}</span>
-                            </div>
-                            <button onclick="playVideo('${movie.link}', '${movie.title.replace(/'/g, "\\'")}')" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-400 text-black font-bold py-3 px-6 rounded-2xl hover:from-emerald-400 hover:to-emerald-300 hover:scale-105 transition-all duration-300 shadow-xl">
-                                ▶️ Watch Now
-                            </button>
-                        </div>
-                    `).join('') : 
-                    '<div class="col-span-full text-center py-20 text-gray-500">No movies found</div>';
+                await fetch(`${API_BASE}?action=add-cat`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name})
+                });
+                document.getElementById('catName').value = '';
+                loadData();
             } catch(e) {
-                document.getElementById('movies-container').innerHTML = 
-                    '<div class="col-span-full text-center py-20 text-red-400">API Error - Check F12 Console</div>';
-                console.error('Movies error:', e);
+                alert('Category add failed');
             }
         }
 
-        function playVideo(link, title) {
-            console.log('Playing video:', link);
-            let embedUrl = '';
+        document.getElementById('movieForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const id = document.getElementById('movieId').value;
+            const action = id ? 'update-post' : 'add-post';
             
-            // Clean the link
-            link = link.trim();
-            
-            // VOE.SX - Multiple pattern support
-            if (link.includes('voe.sx') || link.includes('voe')) {
-                const voeMatch = link.match(/([a-z0-9]{12})/i);
-                if (voeMatch) {
-                    embedUrl = `https://voe.sx/e/${voeMatch[1]}`;
+            try {
+                const res = await fetch(`${API_BASE}?action=${action}${id ? '&id=' + id : ''}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (res.ok) {
+                    alert(id ? 'Updated!' : 'Movie added!');
+                    resetForm();
+                    loadData();
                 }
+            } catch(e) {
+                alert('Upload failed');
             }
-            // DOODSTREAM - Multiple pattern support
-            else if (link.includes('dood')) {
-                const doodMatch = link.match(/([a-z0-9]+)$/i);
-                if (doodMatch) {
-                    embedUrl = `https://dood.ws/e/${doodMatch[1]}`;
-                }
-            }
-            // Direct ID input (no domain)
-            else if (/^[a-z0-9]{12}$/i.test(link)) {
-                // Assume VOE format for 12 character IDs
-                embedUrl = `https://voe.sx/e/${link}`;
-            }
-            else if (/^[a-z0-9]+$/i.test(link)) {
-                // For other alphanumeric IDs, try doodstream
-                embedUrl = `https://dood.ws/e/${link}`;
-            }
-            // Full URL support
-            else if (link.startsWith('http')) {
-                embedUrl = link;
-            }
-            
-            console.log('Embed URL:', embedUrl);
-            
-            if (embedUrl) {
-                document.getElementById('videoTitle').textContent = title;
-                document.getElementById('mainPlayer').src = embedUrl;
-                document.getElementById('videoModal').classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            } else {
-                alert('❌ Invalid video link format!\n\nSupported formats:\n• VOE: vuqevy71anqx or https://voe.sx/vuqevy71anqx\n• DOOD: abc123xyz or https://dood.ws/e/abc123xyz\n\nCurrent link: ' + link);
+        };
+
+        async function editMovie(id) {
+            try {
+                const res = await fetch(`${API_BASE}?action=get-video&id=${id}`);
+                const movie = await res.json();
+                
+                document.getElementById('movieId').value = movie.id;
+                document.getElementById('mTitle').value = movie.title;
+                document.getElementById('mCat').value = movie.cat;
+                document.getElementById('mLink').value = movie.link;
+                document.getElementById('oldImg').value = movie.img || '';
+                document.getElementById('submitBtn').innerText = "UPDATE";
+                document.getElementById('formTitle').innerText = `Edit: ${movie.title}`;
+                document.getElementById('cancelBtn').classList.remove('hidden');
+            } catch(e) {
+                console.error('Edit error:', e);
             }
         }
 
-        function closePlayer() {
-            document.getElementById('videoModal').classList.add('hidden');
-            document.getElementById('mainPlayer').src = '';
-            document.body.style.overflow = 'auto';
+        function resetForm() {
+            document.getElementById('movieForm').reset();
+            document.getElementById('movieId').value = '';
+            document.getElementById('oldImg').value = '';
+            document.getElementById('submitBtn').innerText = "🚀 PUBLISH";
+            document.getElementById('formTitle').innerText = "➕ Add New Movie";
+            document.getElementById('cancelBtn').classList.add('hidden');
         }
 
-        // Events
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('category-btn')) {
-                document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-                currentCategory = e.target.dataset.cat;
-                loadMovies(currentCategory);
+        async function deleteItem(action, id) {
+            if (confirm(`Delete ${action.includes('cat') ? 'category' : 'movie'}?`)) {
+                await fetch(`${API_BASE}?action=${action}&id=${id}`, { method: 'POST' });
+                loadData();
             }
-        });
+        }
 
-        document.getElementById('videoModal').addEventListener('click', (e) => {
-            if (e.target.id === 'videoModal') closePlayer();
-        });
-
-        // Keyboard support
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closePlayer();
-        });
-
-        // Auto refresh
-        loadCategories();
-        loadMovies();
-        setInterval(() => loadMovies(currentCategory), 10000);
+        // Auto refresh every 5s
+        loadData();
+        setInterval(loadData, 5000);
     </script>
 </body>
 </html>
